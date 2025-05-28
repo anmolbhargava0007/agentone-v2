@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -36,37 +36,6 @@ const Login = () => {
     try {
       const success = await login(email, password);
       if (success) {
-        toast.success(`Welcome back! You've successfully logged in.`);
-        navigate("/dashboard");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDemoLogin = async (role: string) => {
-    setIsLoading(true);
-    let demoEmail = "admin@agentone.com";
-    
-    switch (role) {
-      case "admin":
-        demoEmail = "admin@agentone.com";
-        break;
-      case "manager":
-        demoEmail = "manager@agentone.com";
-        break;
-      case "developer":
-        demoEmail = "developer@agentone.com";
-        break;
-      case "viewer":
-        demoEmail = "viewer@agentone.com";
-        break;
-    }
-    
-    try {
-      const success = await login(demoEmail, "1234");
-      if (success) {
-        toast.success(`Welcome! You've logged in as a ${role} user.`);
         navigate("/dashboard");
       }
     } finally {
@@ -155,48 +124,11 @@ const Login = () => {
           
           <CardFooter className="flex flex-col gap-4">
             <div className="text-center w-full">
-              <p className="text-sm text-muted-foreground mb-2">
-                Quick Demo Logins
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                <Button 
-                  variant="outline" 
-                  onClick={() => handleDemoLogin("admin")}
-                  disabled={isLoading}
-                  size="sm"
-                >
-                  Admin User
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => handleDemoLogin("manager")}
-                  disabled={isLoading}
-                  size="sm"
-                >
-                  Manager User
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => handleDemoLogin("developer")}
-                  disabled={isLoading}
-                  size="sm"
-                >
-                  Developer User
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => handleDemoLogin("viewer")}
-                  disabled={isLoading}
-                  size="sm"
-                >
-                  Viewer User
-                </Button>
-              </div>
-            </div>
-            
-            <div className="text-center w-full">
-              <p className="text-xs text-muted-foreground">
-                This is a demo application. Use password "1234" with any demo email.
+              <p className="text-sm text-muted-foreground">
+                Don't have an account?{" "}
+                <Link to="/signup" className="text-primary hover:underline">
+                  Sign up here
+                </Link>
               </p>
             </div>
           </CardFooter>

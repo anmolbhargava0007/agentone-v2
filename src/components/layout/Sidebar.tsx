@@ -22,6 +22,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/context/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { UserSettingsModal } from "@/components/ui/UserSettingsModal";
 
 interface NavItemProps {
   icon: React.ElementType;
@@ -69,6 +70,10 @@ export const Sidebar = () => {
     { icon: Users, label: "Users", to: "/users" },
     { icon: Settings, label: "Settings", to: "/settings" },
   ];
+
+  const getUserRole = () => {
+    return user?.pi_roles?.[0]?.role_name || "User";
+  };
 
   if (isMobile) {
     return (
@@ -123,19 +128,21 @@ export const Sidebar = () => {
               <>
                 <Separator className="my-4" />
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-1">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.avatar} alt={user.name} />
-                      <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                      <AvatarFallback>{user.user_name.charAt(0).toUpperCase()}</AvatarFallback>
                     </Avatar>
-                    <div className="text-sm">
-                      <p className="font-medium">{user.name}</p>
-                      <p className="text-muted-foreground">{user.role}</p>
+                    <div className="text-sm flex-1 min-w-0">
+                      <p className="font-medium truncate">{user.user_name}</p>
+                      <p className="text-muted-foreground truncate">{getUserRole()}</p>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" onClick={logout}>
-                    <LogOut size={18} className="text-muted-foreground" />
-                  </Button>
+                  <div className="flex gap-1">
+                    <UserSettingsModal />
+                    <Button variant="ghost" size="icon" onClick={logout} className="h-8 w-8">
+                      <LogOut size={16} className="text-muted-foreground" />
+                    </Button>
+                  </div>
                 </div>
               </>
             )}
@@ -183,24 +190,25 @@ export const Sidebar = () => {
           )}>
             {collapsed ? (
               <Avatar className="h-8 w-8">
-                <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                <AvatarFallback>{user.user_name.charAt(0).toUpperCase()}</AvatarFallback>
               </Avatar>
             ) : (
               <>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={user.avatar} alt={user.name} />
-                    <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                    <AvatarFallback>{user.user_name.charAt(0).toUpperCase()}</AvatarFallback>
                   </Avatar>
-                  <div className="text-sm">
-                    <p className="font-medium">{user.name}</p>
-                    <p className="text-muted-foreground">{user.role}</p>
+                  <div className="text-sm flex-1 min-w-0">
+                    <p className="font-medium truncate">{user.user_name}</p>
+                    <p className="text-muted-foreground truncate">{getUserRole()}</p>
                   </div>
                 </div>
-                <Button variant="ghost" size="icon" onClick={logout}>
-                  <LogOut size={18} className="text-muted-foreground" />
-                </Button>
+                <div className="flex gap-1">
+                  <UserSettingsModal />
+                  <Button variant="ghost" size="icon" onClick={logout} className="h-8 w-8">
+                    <LogOut size={16} className="text-muted-foreground" />
+                  </Button>
+                </div>
               </>
             )}
           </div>
