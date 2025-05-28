@@ -2,6 +2,8 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { toast } from '@/components/ui/sonner';
 
+const API_URL = import.meta.env.VITE_API_URL
+
 interface UserRole {
   role_id: number;
   role_name: string;
@@ -80,7 +82,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/signin`, {
+      const response = await fetch(`${API_URL}/signin`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -123,7 +125,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     try {
       const token = localStorage.getItem('agentone-token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/user`, {
+      const response = await fetch(`${API_URL}/user`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

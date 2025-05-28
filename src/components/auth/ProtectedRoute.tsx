@@ -12,12 +12,9 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { isAuthenticated, isLoading, login } = useAuth();
   const location = useLocation();
 
-  // For demo purposes, auto-login if not authenticated
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      // This is just for demonstration - in a real app, you would redirect to login
-      // Auto-login with demo credentials
-      login("admin@agentone.com", "1234");
+      login("anmol@gmail.com", "123456");
     }
   }, [isLoading, isAuthenticated, login]);
 
@@ -31,7 +28,6 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   }
 
   if (!isAuthenticated) {
-    // Save the current location to redirect back after login
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

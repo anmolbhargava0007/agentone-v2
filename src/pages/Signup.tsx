@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/components/ui/sonner";
 import { Eye, EyeOff } from "lucide-react";
 import ThemeSwitcher from "@/components/layout/ThemeSwitcher";
+
+const API_URL = import.meta.env.VITE_API_URL
 
 const Signup = () => {
   const [formData, setFormData] = useState({
@@ -34,7 +35,7 @@ const Signup = () => {
     setIsLoading(true);
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/signup`, {
+      const response = await fetch(`${API_URL}/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
