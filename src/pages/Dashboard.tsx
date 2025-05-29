@@ -34,7 +34,7 @@ const Dashboard = () => {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between gap-4 items-start md:items-center animate-fade-in">
         <div>
-          <h1 className="text-3xl font-bold">Welcome back, {user?.name.split(' ')[0]}</h1>
+          <h1 className="text-3xl font-bold">Welcome back, {user?.user_name.split(' ')[0]}</h1>
           <p className="text-muted-foreground">
             Here's what's happening with your AgentOne platform.
           </p>
