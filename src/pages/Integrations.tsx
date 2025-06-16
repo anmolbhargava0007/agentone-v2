@@ -1,15 +1,14 @@
 
 import { useState } from "react";
-import { Plus, Plug, Database, Link, Mail, Slack, ShieldCheck } from "lucide-react";
+import { Plus, Plug, Database, Link, Mail } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { mockIntegrations } from "@/data/mockData";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Integration, IntegrationType } from "@/types";
+import { useIntegrators, useCreateIntegrator, useUpdateIntegrator } from "@/hooks/useApiQueries";
 
 // Map integration type to icon
 const typeIcon = {
@@ -20,38 +19,49 @@ const typeIcon = {
 };
 
 const Integrations = () => {
-  const [integrations, setIntegrations] = useState(mockIntegrations);
+  const { data: integratorsData, isLoading } = useIntegrators({ is_active: true });
+  const createIntegratorMutation = useCreateIntegrator();
+  const updateIntegratorMutation = useUpdateIntegrator();
+  
   const [showNewIntegrationModal, setShowNewIntegrationModal] = useState(false);
   const [newIntegration, setNewIntegration] = useState({
-    name: "",
-    description: "",
-    type: "data" as IntegrationType,
-    provider: "",
-    authType: "API Key"
+    integrator_name: "",
+    descriptions: "",
+    integrator_type: "data",
+    provider_name: "",
+    auth_type: "API Key",
+    icon_name: "",
   });
   const { toast } = useToast();
+
+  const integrations = integratorsData?.data || [];
 
   const handleNewIntegration = () => {
     setShowNewIntegrationModal(true);
   };
 
-  const handleToggle = (id: string) => {
-    setIntegrations(integrations.map(integration => 
-      integration.id === id 
-        ? { ...integration, enabled: !integration.enabled } 
-        : integration
-    ));
+  const handleToggle = async (integration: any) => {
+    try {
+      await updateIntegratorMutation.mutateAsync({
+        ...integration,
+        is_connected: !integration.is_connected
+      });
 
-    const integration = integrations.find(i => i.id === id);
-    
-    toast({
-      title: integration?.enabled ? "Integration Disconnected" : "Integration Connected",
-      description: `${integration?.name} has been ${integration?.enabled ? "disconnected" : "connected"} successfully.`,
-    });
+      toast({
+        title: integration.is_connected ? "Integration Disconnected" : "Integration Connected",
+        description: `${integration.integrator_name} has been ${integration.is_connected ? "disconnected" : "connected"} successfully.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update integration status.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleCreateIntegration = () => {
-    if (!newIntegration.name || !newIntegration.type) {
+  const handleCreateIntegration = async () => {
+    if (!newIntegration.integrator_name || !newIntegration.integrator_type) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields.",
@@ -60,27 +70,46 @@ const Integrations = () => {
       return;
     }
 
-    const newIntegrationObj: Integration = {
-      id: `int-${Math.random().toString(36).substring(2, 10)}`,
-      ...newIntegration,
-      enabled: false
-    };
+    try {
+      await createIntegratorMutation.mutateAsync({
+        ...newIntegration,
+        is_connected: false,
+        is_active: true
+      });
 
-    setIntegrations([...integrations, newIntegrationObj]);
-    setNewIntegration({
-      name: "",
-      description: "",
-      type: "data" as IntegrationType,
-      provider: "",
-      authType: "API Key"
-    });
-    setShowNewIntegrationModal(false);
+      setNewIntegration({
+        integrator_name: "",
+        descriptions: "",
+        integrator_type: "data",
+        provider_name: "",
+        auth_type: "API Key",
+        icon_name: "",
+      });
+      setShowNewIntegrationModal(false);
 
-    toast({
-      title: "Integration Created",
-      description: `${newIntegration.name} has been added successfully.`,
-    });
+      toast({
+        title: "Integration Created",
+        description: `${newIntegration.integrator_name} has been added successfully.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create integration.",
+        variant: "destructive"
+      });
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading integrations...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -96,43 +125,43 @@ const Integrations = () => {
         </Button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {integrations.map((integration) => {
-          const Icon = typeIcon[integration.type] || Plug;
+        {integrations.map((integration: any) => {
+          const Icon = typeIcon[integration.integrator_type as keyof typeof typeIcon] || Plug;
           return (
-            <Card key={integration.id} className="animate-fade-in">
+            <Card key={integration.integrator_id} className="animate-fade-in">
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <Icon className="h-5 w-5 text-accent" />
-                  <CardTitle>{integration.name}</CardTitle>
+                  <CardTitle>{integration.integrator_name}</CardTitle>
                 </div>
-                <CardDescription>{integration.description}</CardDescription>
+                <CardDescription>{integration.descriptions}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Type</span>
-                    <span className="capitalize">{integration.type}</span>
+                    <span className="capitalize">{integration.integrator_type}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Provider</span>
-                    <span>{integration.provider}</span>
+                    <span>{integration.provider_name}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Auth Type</span>
-                    <span>{integration.authType}</span>
+                    <span>{integration.auth_type}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Status</span>
-                    <span className={integration.enabled ? "text-green-500" : "text-red-500"}>
-                      {integration.enabled ? "Enabled" : "Disabled"}
+                    <span className={integration.is_connected ? "text-green-500" : "text-red-500"}>
+                      {integration.is_connected ? "Connected" : "Disconnected"}
                     </span>
                   </div>
                   <Button 
                     className="w-full mt-4" 
-                    variant={integration.enabled ? "destructive" : "default"} 
-                    onClick={() => handleToggle(integration.id)}
+                    variant={integration.is_connected ? "destructive" : "default"} 
+                    onClick={() => handleToggle(integration)}
                   >
-                    {integration.enabled ? "Disconnect" : "Connect"}
+                    {integration.is_connected ? "Disconnect" : "Connect"}
                   </Button>
                 </div>
               </CardContent>
@@ -152,8 +181,8 @@ const Integrations = () => {
               <Label htmlFor="name">Integration Name</Label>
               <Input 
                 id="name" 
-                value={newIntegration.name} 
-                onChange={e => setNewIntegration({...newIntegration, name: e.target.value})}
+                value={newIntegration.integrator_name} 
+                onChange={e => setNewIntegration({...newIntegration, integrator_name: e.target.value})}
                 placeholder="E.g. Salesforce CRM"
               />
             </div>
@@ -161,16 +190,16 @@ const Integrations = () => {
               <Label htmlFor="description">Description</Label>
               <Input 
                 id="description"
-                value={newIntegration.description}
-                onChange={e => setNewIntegration({...newIntegration, description: e.target.value})}
+                value={newIntegration.descriptions}
+                onChange={e => setNewIntegration({...newIntegration, descriptions: e.target.value})}
                 placeholder="What this integration does"
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="type">Integration Type</Label>
               <Select 
-                value={newIntegration.type} 
-                onValueChange={value => setNewIntegration({...newIntegration, type: value as IntegrationType})}
+                value={newIntegration.integrator_type} 
+                onValueChange={value => setNewIntegration({...newIntegration, integrator_type: value})}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select type" />
@@ -187,16 +216,16 @@ const Integrations = () => {
               <Label htmlFor="provider">Provider</Label>
               <Input 
                 id="provider"
-                value={newIntegration.provider}
-                onChange={e => setNewIntegration({...newIntegration, provider: e.target.value})}
+                value={newIntegration.provider_name}
+                onChange={e => setNewIntegration({...newIntegration, provider_name: e.target.value})}
                 placeholder="E.g. Salesforce"
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="authType">Auth Type</Label>
               <Select 
-                value={newIntegration.authType} 
-                onValueChange={value => setNewIntegration({...newIntegration, authType: value})}
+                value={newIntegration.auth_type} 
+                onValueChange={value => setNewIntegration({...newIntegration, auth_type: value})}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select auth type" />
@@ -208,6 +237,15 @@ const Integrations = () => {
                   <SelectItem value="Token">Token</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="icon">Icon Name</Label>
+              <Input 
+                id="icon"
+                value={newIntegration.icon_name}
+                onChange={e => setNewIntegration({...newIntegration, icon_name: e.target.value})}
+                placeholder="Icon identifier"
+              />
             </div>
           </div>
           <DialogFooter>

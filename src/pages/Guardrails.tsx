@@ -5,15 +5,23 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { mockGuardrails } from "@/data/mockData";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Guardrail, GuardrailRule, GuardrailType } from "@/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { 
+  useGuardrails, 
+  useCreateGuardrail, 
+  useUpdateGuardrail, 
+  useDeleteGuardrail,
+  useGuardrailRules,
+  useCreateGuardrailRule,
+  useUpdateGuardrailRule,
+  useDeleteGuardrailRule
+} from "@/hooks/useApiQueries";
 
 const typeInfo = {
   content: {
@@ -22,7 +30,7 @@ const typeInfo = {
     style: "bg-purple-100 text-purple-800"
   },
   security: {
-    label: "Security",
+    label: "Security", 
     icon: ShieldCheck,
     style: "bg-green-100 text-green-800"
   },
@@ -44,94 +52,114 @@ const typeInfo = {
 };
 
 const Guardrails = () => {
-  const [guardrails, setGuardrails] = useState<Guardrail[]>(mockGuardrails);
+  const { data: guardrailsData, isLoading: guardrailsLoading } = useGuardrails({ is_active: true });
+  const { data: rulesData } = useGuardrailRules({ is_active: true });
+  const createGuardrailMutation = useCreateGuardrail();
+  const updateGuardrailMutation = useUpdateGuardrail();
+  const deleteGuardrailMutation = useDeleteGuardrail();
+  const createRuleMutation = useCreateGuardrailRule();
+  const updateRuleMutation = useUpdateGuardrailRule();
+  const deleteRuleMutation = useDeleteGuardrailRule();
+
   const [isNewGuardrailModalOpen, setIsNewGuardrailModalOpen] = useState(false);
   const [isRuleModalOpen, setIsRuleModalOpen] = useState(false);
-  const [selectedGuardrail, setSelectedGuardrail] = useState<Guardrail | null>(null);
+  const [selectedGuardrail, setSelectedGuardrail] = useState<any>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedRule, setSelectedRule] = useState<GuardrailRule | null>(null);
+  const [selectedRule, setSelectedRule] = useState<any>(null);
   
-  const [newGuardrail, setNewGuardrail] = useState<{
-    name: string;
-    description: string;
-    type: GuardrailType;
-  }>({
-    name: "",
-    description: "",
-    type: "content",
+  const [newGuardrail, setNewGuardrail] = useState({
+    guardrail_name: "",
+    descriptions: "",
+    guardrail_type: "content",
   });
 
-  const [newRule, setNewRule] = useState<{
-    name: string;
-    description: string;
-    condition: string;
-    action: string;
-  }>({
-    name: "",
-    description: "",
-    condition: "",
-    action: "",
+  const [newRule, setNewRule] = useState({
+    guardrail_rule_name: "",
+    descriptions: "",
+    conditions: "",
+    actions: "",
   });
   
   const { toast } = useToast();
 
+  // Transform API data to match component structure
+  const guardrails = guardrailsData?.data || [];
+  const rules = rulesData?.data || [];
+
+  // Group rules by guardrail (you may need to implement guardrail-rule mapping)
+  const getGuardrailRules = (guardrailId: number) => {
+    // This would require the guardrail-rule-map API to link rules to guardrails
+    return [];
+  };
+
   const handleNewGuardrail = () => {
     setIsEditMode(false);
     setNewGuardrail({
-      name: "",
-      description: "",
-      type: "content",
+      guardrail_name: "",
+      descriptions: "",
+      guardrail_type: "content",
     });
     setIsNewGuardrailModalOpen(true);
   };
 
-  const handleEditGuardrail = (guardrail: Guardrail) => {
+  const handleEditGuardrail = (guardrail: any) => {
     setIsEditMode(true);
     setNewGuardrail({
-      name: guardrail.name,
-      description: guardrail.description,
-      type: guardrail.type,
+      guardrail_name: guardrail.guardrail_name,
+      descriptions: guardrail.descriptions,
+      guardrail_type: guardrail.guardrail_type,
     });
     setSelectedGuardrail(guardrail);
     setIsNewGuardrailModalOpen(true);
   };
 
-  const handleDeleteGuardrail = (guardrail: Guardrail) => {
+  const handleDeleteGuardrail = (guardrail: any) => {
     setSelectedGuardrail(guardrail);
     setIsDeleteDialogOpen(true);
   };
 
-  const confirmDeleteGuardrail = () => {
+  const confirmDeleteGuardrail = async () => {
     if (selectedGuardrail) {
-      const updatedGuardrails = guardrails.filter(g => g.id !== selectedGuardrail.id);
-      setGuardrails(updatedGuardrails);
-      
-      toast({
-        title: "Guardrail Deleted",
-        description: `${selectedGuardrail.name} has been removed.`,
-      });
-      
-      setIsDeleteDialogOpen(false);
-      setSelectedGuardrail(null);
+      try {
+        await deleteGuardrailMutation.mutateAsync(selectedGuardrail.guardrail_id);
+        toast({
+          title: "Guardrail Deleted",
+          description: `${selectedGuardrail.guardrail_name} has been removed.`,
+        });
+        setIsDeleteDialogOpen(false);
+        setSelectedGuardrail(null);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to delete guardrail.",
+          variant: "destructive"
+        });
+      }
     }
   };
 
-  const toggleGuardrail = (id: string) => {
-    setGuardrails(guardrails.map(guardrail => 
-      guardrail.id === id 
-        ? { ...guardrail, enabled: !guardrail.enabled }
-        : guardrail
-    ));
-
-    toast({
-      title: "Guardrail Updated",
-      description: "The guardrail settings have been updated.",
-    });
+  const toggleGuardrail = async (guardrail: any) => {
+    try {
+      await updateGuardrailMutation.mutateAsync({
+        ...guardrail,
+        is_active: !guardrail.is_active
+      });
+      toast({
+        title: "Guardrail Updated",
+        description: "The guardrail settings have been updated.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update guardrail.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const saveGuardrail = () => {
-    if (!newGuardrail.name || !newGuardrail.description) {
+  const saveGuardrail = async () => {
+    if (!newGuardrail.guardrail_name || !newGuardrail.descriptions) {
       toast({
         title: "Missing Information",
         description: "Please provide both name and description for the guardrail.",
@@ -140,91 +168,51 @@ const Guardrails = () => {
       return;
     }
 
-    if (isEditMode && selectedGuardrail) {
-      // Update existing guardrail
-      setGuardrails(guardrails.map(guardrail => 
-        guardrail.id === selectedGuardrail.id 
-          ? { 
-              ...guardrail, 
-              name: newGuardrail.name,
-              description: newGuardrail.description,
-              type: newGuardrail.type
-            }
-          : guardrail
-      ));
-      
+    try {
+      if (isEditMode && selectedGuardrail) {
+        await updateGuardrailMutation.mutateAsync({
+          guardrail_id: selectedGuardrail.guardrail_id,
+          ...newGuardrail,
+          is_active: selectedGuardrail.is_active
+        });
+        toast({
+          title: "Guardrail Updated",
+          description: `${newGuardrail.guardrail_name} has been updated successfully.`,
+        });
+      } else {
+        await createGuardrailMutation.mutateAsync({
+          ...newGuardrail,
+          is_active: true
+        });
+        toast({
+          title: "Guardrail Created",
+          description: `${newGuardrail.guardrail_name} has been added successfully.`,
+        });
+      }
+      setIsNewGuardrailModalOpen(false);
+    } catch (error) {
       toast({
-        title: "Guardrail Updated",
-        description: `${newGuardrail.name} has been updated successfully.`,
-      });
-    } else {
-      // Create new guardrail
-      const newGuardrailObj: Guardrail = {
-        id: `guardrail-${Math.random().toString(36).substring(2, 10)}`,
-        name: newGuardrail.name,
-        description: newGuardrail.description,
-        type: newGuardrail.type,
-        enabled: true,
-        rules: []
-      };
-
-      setGuardrails([...guardrails, newGuardrailObj]);
-      
-      toast({
-        title: "Guardrail Created",
-        description: `${newGuardrail.name} has been added successfully.`,
+        title: "Error",
+        description: `Failed to ${isEditMode ? 'update' : 'create'} guardrail.`,
+        variant: "destructive"
       });
     }
-
-    setIsNewGuardrailModalOpen(false);
   };
 
-  const openAddRuleModal = (guardrail: Guardrail) => {
+  const openAddRuleModal = (guardrail: any) => {
     setSelectedGuardrail(guardrail);
     setIsEditMode(false);
     setNewRule({
-      name: "",
-      description: "",
-      condition: "",
-      action: "",
+      guardrail_rule_name: "",
+      descriptions: "",
+      conditions: "",
+      actions: "",
     });
     setIsRuleModalOpen(true);
   };
 
-  const openEditRuleModal = (guardrail: Guardrail, rule: GuardrailRule) => {
-    setSelectedGuardrail(guardrail);
-    setSelectedRule(rule);
-    setIsEditMode(true);
-    setNewRule({
-      name: rule.name,
-      description: rule.description,
-      condition: rule.condition,
-      action: rule.action,
-    });
-    setIsRuleModalOpen(true);
-  };
-
-  const deleteRule = (guardrailId: string, ruleId: string) => {
-    const updatedGuardrails = guardrails.map(guardrail => {
-      if (guardrail.id === guardrailId) {
-        return {
-          ...guardrail,
-          rules: guardrail.rules.filter(rule => rule.id !== ruleId)
-        };
-      }
-      return guardrail;
-    });
-    
-    setGuardrails(updatedGuardrails);
-    
-    toast({
-      title: "Rule Deleted",
-      description: "The rule has been removed.",
-    });
-  };
-
-  const saveRule = () => {
-    if (!newRule.name || !newRule.condition || !newRule.action) {
+  const saveRule = async () => {
+    if (!newRule.guardrail_rule_name || !newRule.conditions || !newRule.actions) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields.",
@@ -233,90 +221,47 @@ const Guardrails = () => {
       return;
     }
 
-    if (!selectedGuardrail) return;
-
-    if (isEditMode && selectedRule) {
-      // Update existing rule
-      const updatedGuardrails = guardrails.map(guardrail => {
-        if (guardrail.id === selectedGuardrail.id) {
-          return {
-            ...guardrail,
-            rules: guardrail.rules.map(rule => 
-              rule.id === selectedRule.id 
-                ? { 
-                    ...rule,
-                    name: newRule.name,
-                    description: newRule.description,
-                    condition: newRule.condition,
-                    action: newRule.action
-                  }
-                : rule
-            )
-          };
-        }
-        return guardrail;
-      });
-      
-      setGuardrails(updatedGuardrails);
-      
+    try {
+      if (isEditMode && selectedRule) {
+        await updateRuleMutation.mutateAsync({
+          guardrail_rule_id: selectedRule.guardrail_rule_id,
+          ...newRule,
+          is_active: selectedRule.is_active
+        });
+        toast({
+          title: "Rule Updated",
+          description: `${newRule.guardrail_rule_name} has been updated successfully.`,
+        });
+      } else {
+        await createRuleMutation.mutateAsync({
+          ...newRule,
+          is_active: true
+        });
+        toast({
+          title: "Rule Added",
+          description: `${newRule.guardrail_rule_name} has been added.`,
+        });
+      }
+      setIsRuleModalOpen(false);
+    } catch (error) {
       toast({
-        title: "Rule Updated",
-        description: `${newRule.name} has been updated successfully.`,
-      });
-    } else {
-      // Create new rule
-      const newRuleObj: GuardrailRule = {
-        id: `rule-${Math.random().toString(36).substring(2, 10)}`,
-        name: newRule.name,
-        description: newRule.description,
-        condition: newRule.condition,
-        action: newRule.action,
-        enabled: true
-      };
-
-      const updatedGuardrails = guardrails.map(guardrail => {
-        if (guardrail.id === selectedGuardrail.id) {
-          return {
-            ...guardrail,
-            rules: [...guardrail.rules, newRuleObj]
-          };
-        }
-        return guardrail;
-      });
-      
-      setGuardrails(updatedGuardrails);
-      
-      toast({
-        title: "Rule Added",
-        description: `${newRule.name} has been added to ${selectedGuardrail.name}.`,
+        title: "Error",
+        description: `Failed to ${isEditMode ? 'update' : 'create'} rule.`,
+        variant: "destructive"
       });
     }
-
-    setIsRuleModalOpen(false);
   };
 
-  const toggleRule = (guardrailId: string, ruleId: string) => {
-    const updatedGuardrails = guardrails.map(guardrail => {
-      if (guardrail.id === guardrailId) {
-        return {
-          ...guardrail,
-          rules: guardrail.rules.map(rule => 
-            rule.id === ruleId 
-              ? { ...rule, enabled: !rule.enabled }
-              : rule
-          )
-        };
-      }
-      return guardrail;
-    });
-    
-    setGuardrails(updatedGuardrails);
-    
-    toast({
-      title: "Rule Updated",
-      description: "The rule has been updated.",
-    });
-  };
+  if (guardrailsLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading guardrails...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -345,16 +290,18 @@ const Guardrails = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {guardrails.map((guardrail) => {
-            const type = typeInfo[guardrail.type] || typeInfo.content;
+          {guardrails.map((guardrail: any) => {
+            const type = typeInfo[guardrail.guardrail_type as keyof typeof typeInfo] || typeInfo.content;
             const GuardrailIcon = type.icon;
+            const guardrailRules = getGuardrailRules(guardrail.guardrail_id);
+            
             return (
-              <Card key={guardrail.id}>
+              <Card key={guardrail.guardrail_id}>
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center gap-2">
                       <GuardrailIcon className="mr-2 h-5 w-5" />
-                      {guardrail.name}
+                      {guardrail.guardrail_name}
                     </CardTitle>
                     <div className="flex gap-2">
                       <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => handleEditGuardrail(guardrail)}>
@@ -364,12 +311,12 @@ const Guardrails = () => {
                         <Trash2 className="h-4 w-4" />
                       </Button>
                       <Switch
-                        checked={guardrail.enabled}
-                        onCheckedChange={() => toggleGuardrail(guardrail.id)}
+                        checked={guardrail.is_active}
+                        onCheckedChange={() => toggleGuardrail(guardrail)}
                       />
                     </div>
                   </div>
-                  <CardDescription>{guardrail.description}</CardDescription>
+                  <CardDescription>{guardrail.descriptions}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="mt-3 flex gap-2 flex-wrap">
@@ -377,78 +324,22 @@ const Guardrails = () => {
                       {type.label}
                     </span>
                     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-muted`}>
-                      {guardrail.rules.length} rules
+                      {guardrailRules.length} rules
                     </span>
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${guardrail.enabled ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
-                      {guardrail.enabled ? "Active" : "Disabled"}
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${guardrail.is_active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+                      {guardrail.is_active ? "Active" : "Disabled"}
                     </span>
                   </div>
                   
                   <div className="mt-4">
-                    <Tabs defaultValue="rules">
-                      <TabsList className="w-full">
-                        <TabsTrigger value="rules" className="flex-1">Rules</TabsTrigger>
-                        <TabsTrigger value="info" className="flex-1">Info</TabsTrigger>
-                      </TabsList>
-                      <TabsContent value="rules" className="mt-2">
-                        {guardrail.rules.length === 0 ? (
-                          <div className="text-center py-6 px-2">
-                            <p className="text-sm text-muted-foreground mb-4">No rules defined yet</p>
-                            <Button size="sm" onClick={() => openAddRuleModal(guardrail)}>
-                              <Plus className="mr-1 h-3 w-3" /> Add First Rule
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="space-y-2 max-h-40 overflow-auto pr-1">
-                            {guardrail.rules.map(rule => (
-                              <div key={rule.id} className="text-xs border rounded-md p-2">
-                                <div className="flex justify-between items-center mb-1">
-                                  <span className="font-medium">{rule.name}</span>
-                                  <div className="flex gap-1">
-                                    <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={() => openEditRuleModal(guardrail, rule)}>
-                                      <Edit className="h-3 w-3" />
-                                    </Button>
-                                    <Button variant="ghost" size="sm" className="h-5 w-5 p-0 text-red-500" onClick={() => deleteRule(guardrail.id, rule.id)}>
-                                      <Trash2 className="h-3 w-3" />
-                                    </Button>
-                                    <Switch
-                                      checked={rule.enabled}
-                                      onCheckedChange={() => toggleRule(guardrail.id, rule.id)}
-                                      className="scale-75 -mr-1"
-                                    />
-                                  </div>
-                                </div>
-                                <p className="text-muted-foreground">{rule.description}</p>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="w-full mt-3"
-                          onClick={() => openAddRuleModal(guardrail)}
-                        >
-                          <Plus className="mr-1 h-3 w-3" /> Add Rule
-                        </Button>
-                      </TabsContent>
-                      <TabsContent value="info" className="mt-2 space-y-2 text-xs">
-                        <div>
-                          <span className="text-muted-foreground">Type:</span>
-                          <span className="font-medium ml-1 capitalize">{guardrail.type}</span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Active Rules:</span>
-                          <span className="font-medium ml-1">{guardrail.rules.filter(r => r.enabled).length}</span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Status:</span>
-                          <span className={`font-medium ml-1 ${guardrail.enabled ? "text-green-600" : "text-red-600"}`}>
-                            {guardrail.enabled ? "Enabled" : "Disabled"}
-                          </span>
-                        </div>
-                      </TabsContent>
-                    </Tabs>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full"
+                      onClick={() => openAddRuleModal(guardrail)}
+                    >
+                      <Plus className="mr-1 h-3 w-3" /> Add Rule
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -473,8 +364,8 @@ const Guardrails = () => {
               <Label htmlFor="name">Guardrail Name</Label>
               <Input 
                 id="name" 
-                value={newGuardrail.name} 
-                onChange={e => setNewGuardrail({...newGuardrail, name: e.target.value})}
+                value={newGuardrail.guardrail_name} 
+                onChange={e => setNewGuardrail({...newGuardrail, guardrail_name: e.target.value})}
                 placeholder="E.g. PII Filter"
               />
             </div>
@@ -482,8 +373,8 @@ const Guardrails = () => {
               <Label htmlFor="description">Description</Label>
               <Textarea 
                 id="description"
-                value={newGuardrail.description}
-                onChange={e => setNewGuardrail({...newGuardrail, description: e.target.value})}
+                value={newGuardrail.descriptions}
+                onChange={e => setNewGuardrail({...newGuardrail, descriptions: e.target.value})}
                 placeholder="What this guardrail does"
                 rows={3}
               />
@@ -491,8 +382,8 @@ const Guardrails = () => {
             <div className="space-y-2">
               <Label htmlFor="type">Guardrail Type</Label>
               <Select 
-                value={newGuardrail.type} 
-                onValueChange={value => setNewGuardrail({...newGuardrail, type: value as GuardrailType})}
+                value={newGuardrail.guardrail_type} 
+                onValueChange={value => setNewGuardrail({...newGuardrail, guardrail_type: value})}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select type" />
@@ -526,7 +417,7 @@ const Guardrails = () => {
             <DialogDescription>
               {isEditMode 
                 ? "Modify your rule settings" 
-                : `Add a new rule to ${selectedGuardrail?.name || "guardrail"}`}
+                : `Add a new rule to ${selectedGuardrail?.guardrail_name || "guardrail"}`}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -534,8 +425,8 @@ const Guardrails = () => {
               <Label htmlFor="rule-name">Rule Name</Label>
               <Input 
                 id="rule-name" 
-                value={newRule.name} 
-                onChange={e => setNewRule({...newRule, name: e.target.value})}
+                value={newRule.guardrail_rule_name} 
+                onChange={e => setNewRule({...newRule, guardrail_rule_name: e.target.value})}
                 placeholder="E.g. Block PII"
               />
             </div>
@@ -543,8 +434,8 @@ const Guardrails = () => {
               <Label htmlFor="rule-description">Description</Label>
               <Input 
                 id="rule-description"
-                value={newRule.description}
-                onChange={e => setNewRule({...newRule, description: e.target.value})}
+                value={newRule.descriptions}
+                onChange={e => setNewRule({...newRule, descriptions: e.target.value})}
                 placeholder="What this rule does"
               />
             </div>
@@ -552,8 +443,8 @@ const Guardrails = () => {
               <Label htmlFor="condition">Condition</Label>
               <Textarea 
                 id="condition"
-                value={newRule.condition}
-                onChange={e => setNewRule({...newRule, condition: e.target.value})}
+                value={newRule.conditions}
+                onChange={e => setNewRule({...newRule, conditions: e.target.value})}
                 placeholder="When this condition is met..."
                 rows={2}
               />
@@ -562,8 +453,8 @@ const Guardrails = () => {
               <Label htmlFor="action">Action</Label>
               <Textarea 
                 id="action"
-                value={newRule.action}
-                onChange={e => setNewRule({...newRule, action: e.target.value})}
+                value={newRule.actions}
+                onChange={e => setNewRule({...newRule, actions: e.target.value})}
                 placeholder="Take this action..."
                 rows={2}
               />
@@ -587,7 +478,7 @@ const Guardrails = () => {
             <AlertDialogTitle>Delete Guardrail?</AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone. This will permanently delete the guardrail
-              "{selectedGuardrail?.name}" and all its rules.
+              "{selectedGuardrail?.guardrail_name}" and all its rules.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
